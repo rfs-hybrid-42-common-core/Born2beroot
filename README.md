@@ -51,13 +51,15 @@ The subject requires choosing between Debian and Rocky Linux. While this reposit
 **Why choose Debian? (Pros & Cons)**
 * **Advantages:** Debian is widely considered one of the most stable operating systems in existence. It has a massive community, extensive documentation, and is highly recommended for beginners. It uses less memory out-of-the-box compared to Rocky.
 * **Disadvantages:** Because its priority is stability, Debian's software packages are often older. It sacrifices cutting-edge features for reliability.
-* **Evaluation Prep - `apt` vs. `aptitude`:** * **`apt` (Advanced Package Tool):** The standard, lower-level command-line tool used to handle packages. It is straightforward and handles most installations and updates smoothly.
+* **Evaluation Prep - `apt` vs. `aptitude`:**
+  * **`apt` (Advanced Package Tool):** The standard, lower-level command-line tool used to handle packages. It is straightforward and handles most installations and updates smoothly.
   * **`aptitude`:** A high-level, interactive front-end package manager. While `apt` might simply fail or give up when encountering a complex dependency conflict, `aptitude` uses a more aggressive search algorithm to suggest multiple potential resolutions to the user. 
 
 **Why choose Rocky Linux? (Pros & Cons)**
 * **Advantages:** Rocky Linux is a downstream, completely free, and bug-for-bug compatible clone of Red Hat Enterprise Linux (RHEL). If you want to train for a corporate IT environment that relies on Red Hat, Rocky is the perfect choice. 
 * **Disadvantages:** It is significantly more complex to set up and maintain than Debian, largely due to the strictness of its default security module (SELinux).
-* **Evaluation Prep - What is DNF?** * **`dnf` (Dandified YUM):** It is the next-generation package manager for RPM-based Linux distributions. It replaced the older `yum` package manager because `dnf` performs much faster, uses significantly less memory, and features a completely rewritten algorithm for resolving complex software dependencies.
+* **Evaluation Prep - What is DNF?**
+  * **`dnf` (Dandified YUM):** It is the next-generation package manager for RPM-based Linux distributions. It replaced the older `yum` package manager because `dnf` performs much faster, uses significantly less memory, and features a completely rewritten algorithm for resolving complex software dependencies.
 
 ### 2. AppArmor vs. SELinux
 Both AppArmor and SELinux are **Mandatory Access Control (MAC)** systems. In a standard Linux environment (which uses Discretionary Access Control or DAC), a user can do whatever they want with a file if they own it. A MAC system overrides this: it restricts the actions of specific *programs* and *services*, regardless of which user is running them. If a service is compromised, the MAC system prevents it from accessing files outside of its strict permissions.
@@ -97,7 +99,8 @@ A firewall is a network security system that monitors and controls incoming and 
 **Evaluation Prep - firewalld (If you chose Rocky Linux)**
 * **What is it?** firewalld is a firewall manager that uses "zones" to define the trust level of network connections or interfaces. It is the default for Rocky Linux.
 * **Project Context:** Just like UFW, it is used here to lock down the server, allowing only port 4242.
-* **Useful Commands:** * `sudo firewall-cmd --state` checks if firewalld is running.
+* **Useful Commands:**
+  * `sudo firewall-cmd --state` checks if firewalld is running.
   * `sudo firewall-cmd --list-ports` shows the actively opened ports (should display `4242/tcp`).
 
 ### 4. VirtualBox vs. UTM

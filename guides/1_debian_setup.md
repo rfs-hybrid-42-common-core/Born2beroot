@@ -26,7 +26,7 @@ Before starting, ensure you have downloaded the latest **Debian netinst ISO** (N
 
 > **[Insert Screenshot: The VirtualBox "New" screen showing the ISO selected and the "Skip Unattended Installation" box checked]**
 
-5. Click **Next**. Allocate at least **1024 MB** of Base Memory (RAM) and 1 CPU.
+5. Click **Next**. Allocate at least **4096 MB** of Base Memory (RAM) and 4 CPUs.
 6. Click **Next**. Create a Virtual Hard Disk. For the bonus partitioning scheme, a **30 GB** dynamically allocated disk is highly recommended. Click **Finish**.
 7. Now, select your newly created VM and click **Settings**.
 8. Go to **Network** and ensure Adapter 1 is set to **NAT**. Click **Advanced** and set up **Port Forwarding**:
@@ -53,49 +53,67 @@ Start your virtual machine and select **Install** (do not select Graphical Insta
 > **[Insert Screenshot: Setting the Hostname to maaugust42]**
 
 ### Partitioning Disks (The Most Critical Step)
-To achieve the bonus score, you must set up specific logical volumes. 
+To achieve the bonus score, you must set up 7 specific logical volumes. We will use a "smart" approach: we let Debian automatically configure the complex LUKS encryption, and then we manually carve out our specific volumes.
 
 1. Select **Guided - use entire disk and set up encrypted LVM**.
 2. Select your 30GB VDI disk.
-3. Select **Separate /home, /var, and /tmp partitions** (this gives us a head start on the bonus layout).
-4. Select `<Yes>` to write the current partition table and wait for the disk erasure to finish (this can be skipped/cancelled if you are testing, but let it run for your final VM).
+3. Select **Separate /home, /var, and /tmp partitions**.
+4. Select `<Yes>` to write the partition table and wait for the disk erasure (this can be cancelled if you are testing, but let it run for your final VM).
 5. Enter your **Encryption Passphrase**. You will need this every time you boot the server!
+6. When prompted for "Amount of volume group to use", leave it at the default max size and hit `<Enter>`.
 
 > **[Insert Screenshot: The "Separate /home, /var, and /tmp" selection screen]**
 
 #### Configuring the Bonus Logical Volumes
+Debian has now successfully built the encrypted vault and auto-generated 5 volumes with weird sizes. We are going to delete them and create our perfect bonus layout.
 
-After the encrypted volume is created, Debian will show you the proposed sizes. We need to manually adjust them to match the bonus subject requirements:
+1. Scroll down to **Configure the Logical Volume Manager**. When prompted with "Write the changes to disks and configure LVM?", select `<Yes>`.
+2. You are now in the LVM menu. Select **Delete logical volume**.
+3. Delete **all 5** of the auto-generated volumes (`home`, `root`, `swap_1`, `tmp`, `var`). Do this one by one until your Logical Volumes count is 0.
+4. Now, select **Create logical volume**. Select your Volume Group (e.g., `hostname-vg`) and create the following 7 volumes one by one:
+   * Name: `root` | Size: `8G`
+   * Name: `swap` | Size: `2G`
+   * Name: `home` | Size: `5G`
+   * Name: `var`  | Size: `3G`
+   * Name: `srv`  | Size: `3G`
+   * Name: `tmp`  | Size: `3G`
+   * Name: `var-log` | Size: `4G`
+5. Select **Finish** to exit the LVM configuration menu.
 
-1. Scroll down to **Configure the Logical Volume Manager**. Keep current layout? Select `<Yes>`.
-2. You are now in the LVM menu. You will see existing Logical Volumes (root, var, swap, tmp, home). 
-3. We need to create two missing volumes: `/srv` and `/var/log`.
-   * Select **Create logical volume**.
-   * Select your Volume Group (usually named `hostname-vg`).
-   * Name it `srv`. Assign it `3G`.
-   * Repeat the process to create a volume named `var-log` and assign it `4G`.
-4. Select **Finish** to exit the LVM configuration menu.
-
-> **[Insert Screenshot: The LVM Configuration menu showing all 7 Logical Volumes]**
+> **[Insert Screenshot: The LVM Configuration menu showing all 7 of your custom Logical Volumes]**
 
 #### Formatting and Mounting the Volumes
-Now, assign mount points to the logical volumes you just created so the OS knows how to use them:
-1. Scroll to the `srv` logical volume, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** `/srv`.
-2. Scroll to the `var-log` logical volume, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** Enter manually as `/var/log`.
-3. Select **Finish partitioning and write changes to disk**.
+Now, we must assign file systems and mount points to the 7 logical volumes we just carved out:
+1. Scroll to the `root` LV, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** `/` (the root file system).
+2. Scroll to the `swap` LV, select `#1`, and set **Use as:** `swap area`.
+3. Scroll to the `home` LV, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** `/home`.
+4. Scroll to the `var` LV, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** `/var`.
+5. Scroll to the `srv` LV, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** `/srv`.
+6. Scroll to the `tmp` LV, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** `/tmp`.
+7. Scroll to the `var-log` LV, select `#1`, set **Use as:** `Ext4`, and set **Mount point:** Enter manually as `/var/log`.
+8. Select **Finish partitioning and write changes to disk**.
 
 > **[Insert Screenshot: The final partition overview screen before writing to disk. This is the exact screenshot evaluators want to see!]**
 
+### 🧠 Evaluation Prep: Defending Your LVM Layout
+During your defense, the evaluator will likely look at your partition sizes and ask: *"Your Logical Volumes only add up to ~28GB, but your Volume Group has over 31GB. Why did you leave 3GB unallocated? And why use LVM at all?"*
+
+**Here is exactly how you answer for maximum points:**
+> "The primary advantage of Logical Volume Management (LVM) is flexibility. Standard partitions are permanently locked in size, but LVM allows for dynamic resizing. I intentionally left ~3GB of free space unallocated in my Volume Group. If my `/var/log` partition ever gets completely full of system logs in the future, I can use the `lvextend` command to instantly grab that unallocated space and expand the partition on the fly, without even needing to shut down or reboot the server!"
+
 ### Software Selection
 1. Scan extra installation media? `<No>`.
-2. Participate in package usage survey? `<No>`.
-3. **Software selection:** Uncheck "Debian desktop environment" and "GNOME" (Graphical interfaces equal an instant 0!).
-4. **ONLY** leave **SSH server** and **standard system utilities** checked.
+2. **Debian archive mirror country:** Select your current country (or the one geographically closest to you for faster downloads).
+3. **Debian archive mirror:** Select `deb.debian.org` (or the default provided for your region).
+4. **HTTP proxy information:** Leave this completely blank and hit `<Enter>`.
+5. Participate in package usage survey? `<No>`.
+6. **Software selection:** Uncheck "Debian desktop environment" and "GNOME" (Graphical interfaces equal an instant 0!).
+7. **ONLY** leave **SSH server** and **standard system utilities** checked.
 
 > **[Insert Screenshot: Software selection screen with ONLY SSH and Standard Utilities checked]**
 
-5. Install the GRUB boot loader to your primary drive (`/dev/sda`).
-6. Installation complete! Reboot your new headless server.
+8. Install the GRUB boot loader to your primary drive (`/dev/sda`).
+9. Installation complete! Reboot your new headless server.
 
 ## 🛠️ Phase 3: Base Configuration & Sudo Setup
 Log into your new virtual machine using the `root` password you created during installation. 

@@ -96,10 +96,10 @@ Now, we must assign file systems and mount points to the 7 logical volumes we ju
 > **[Insert Screenshot: The final partition overview screen before writing to disk. This is the exact screenshot evaluators want to see!]**
 
 ### 🧠 Evaluation Prep: Defending Your LVM Layout
-During your defense, the evaluator will likely look at your partition sizes and ask: *"Your Logical Volumes only add up to ~28GB, but your Volume Group has over 31GB. Why did you leave 3GB unallocated? And why use LVM at all?"*
+During your defense, the evaluator will look at your partition layout and ask: *"Your Logical Volumes only add up to about 28.2G, but your encrypted container is 29G. Why did you leave ~900MB unallocated? And why use LVM at all?"*
 
 **Here is exactly how you answer for maximum points:**
-> "The primary advantage of Logical Volume Management (LVM) is flexibility. Standard partitions are permanently locked in size, but LVM allows for dynamic resizing. I intentionally left ~3GB of free space unallocated in my Volume Group. If my `/var/log` partition ever gets completely full of system logs in the future, I can use the `lvextend` command to instantly grab that unallocated space and expand the partition on the fly, without even needing to shut down or reboot the server!"
+> "The primary advantage of Logical Volume Management (LVM) is flexibility. Standard partitions are permanently locked in size, but LVM abstracts this into a flexible pool . In system administration, it is a best practice to never allocate 100% of your Volume Group. I intentionally left that ~900MB of free space unallocated. If my `/var/log` partition ever gets completely full of system logs in the future, I can use the `lvextend` command to instantly grab that unallocated space and expand the partition on the fly. Furthermore, LVM requires unallocated space if you ever want to create live LVM snapshots for backups!"
 
 ### Software Selection
 1. Scan extra installation media? `<No>`.
@@ -116,7 +116,17 @@ During your defense, the evaluator will likely look at your partition sizes and 
 9. Installation complete! Reboot your new headless server.
 
 ## 🛠️ Phase 3: Base Configuration & Sudo Setup
-Log into your new virtual machine using the `root` password you created during installation. 
+Log into your new virtual machine using the `root` password you created during installation.
+
+### 🧠 Evaluation Prep: Defending Your Partition Sizes (`lsblk`)
+Before installing packages, run the following command to view your new partition layout:
+```bash
+lsblk
+```
+
+**The Trap:** The evaluator will look at your output and ask: *"You said you made the root partition 10G, so why does `lsblk` say 9.3G?"*
+
+**The Defense:** > "This happens because of the difference between Base-10 (Gigabytes) and Base-2 (Gibibytes). When I typed `10G` in the installer, it calculated it in standard decimal Gigabytes ($10 \times 1000^3$ bytes). However, the `lsblk` command displays output in binary Gibibytes ($1024^3$ bytes). If you do the math, $10,000,000,000 / 1024^3 \approx 9.31$ GiB. The `lsblk` command just uses the 'G' label for short. The sizes are mathematically exact!"
 
 ### 1. Update the System
 Before installing anything, ensure your package lists are up to date:

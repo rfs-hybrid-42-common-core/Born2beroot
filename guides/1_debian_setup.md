@@ -71,8 +71,8 @@ Debian has now successfully built the encrypted vault and auto-generated 5 volum
 2. You are now in the LVM menu. Select **Delete logical volume**.
 3. Delete **all 5** of the auto-generated volumes (`home`, `root`, `swap_1`, `tmp`, `var`). Do this one by one until your Logical Volumes count is 0.
 4. Now, select **Create logical volume**. Select your Volume Group (e.g., `hostname-vg`) and create the following 7 volumes one by one:
-   * Name: `root` | Size: `8G`
-   * Name: `swap` | Size: `2G`
+   * Name: `root` | Size: `10G`
+   * Name: `swap` | Size: `2.3G`
    * Name: `home` | Size: `5G`
    * Name: `var`  | Size: `3G`
    * Name: `srv`  | Size: `3G`

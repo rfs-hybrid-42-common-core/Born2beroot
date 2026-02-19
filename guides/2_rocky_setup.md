@@ -3,17 +3,17 @@
 This step-by-step guide will walk you through setting up a headless Rocky Linux virtual machine that perfectly satisfies both the mandatory and bonus requirements of the Born2beroot project.
 
 ## 📑 Table of Contents
-1. [Phase 1: Virtual Machine Creation](#-phase-1-virtual-machine-creation)
-2. [Phase 2: OS Installation & Encrypted LVM](#-phase-2-os-installation--encrypted-lvm-bonus-layout)
-3. [Phase 3: Base Configuration & Sudo Setup](#-phase-3-base-configuration--sudo-setup)
-4. [Phase 4: SSH, Firewalld & SELinux Configuration](#-phase-4-ssh-firewalld--selinux-configuration)
-5. [Phase 5: Password Policy & User Management](#-phase-5-password-policy--user-management)
-6. [Phase 6: The Monitoring Script](#-phase-6-the-monitoring-script)
-7. [Phase 7: Bonus Services (WordPress & FTP)](#-phase-7-bonus-services-wordpress--ftp)
+1. [💿 Phase 1: Virtual Machine Creation](#phase-1-virtual-machine-creation)
+2. [🏗️ Phase 2: OS Installation & Encrypted LVM](#phase-2-os-installation--encrypted-lvm-bonus-layout)
+3. [🛠️ Phase 3: Base Configuration & Sudo Setup](#phase-3-base-configuration--sudo-setup)
+4. [🛡️ Phase 4: SSH, Firewalld & SELinux Configuration](#phase-4-ssh-firewalld--selinux-configuration)
+5. [🔐 Phase 5: Password Policy & User Management](#phase-5-password-policy--user-management)
+6. [⏱️ Phase 6: The Monitoring Script](#phase-6-the-monitoring-script)
+7. [🌟 Phase 7: Bonus Services (WordPress & FTP)](#phase-7-bonus-services-wordpress--ftp)
 
 ---
 
-## 💿 Phase 1: Virtual Machine Creation
+## Phase 1: Virtual Machine Creation
 
 ### Prerequisite: Download the ISO
 Ensure you have downloaded the **Rocky Linux Minimal ISO** directly from the official Rocky Linux website (e.g., `Rocky-9.x-x86_64-minimal.iso`).
@@ -35,7 +35,7 @@ Ensure you have downloaded the **Rocky Linux Minimal ISO** directly from the off
 
 ---
 
-## 🏗️ Phase 2: OS Installation & Encrypted LVM (Bonus Layout)
+## Phase 2: OS Installation & Encrypted LVM (Bonus Layout)
 Start your virtual machine and select **Install Rocky Linux**. Rocky uses the "Anaconda" installer. 
 
 ### Localization & User Setup
@@ -72,7 +72,7 @@ Start your virtual machine and select **Install Rocky Linux**. Rocky uses the "A
 
 ---
 
-## 🛠️ Phase 3: Base Configuration & Sudo Setup
+## Phase 3: Base Configuration & Sudo Setup
 Log in with your user account (`maaugust`) and your user password. Since you checked "Make this user administrator," you can use `sudo`.
 
 ### 1. Update the System
@@ -132,7 +132,7 @@ sestatus
 
 ---
 
-## 🛡️ Phase 4: SSH, Firewalld & SELinux Configuration
+## Phase 4: SSH, Firewalld & SELinux Configuration
 
 ### 1. Configure Firewalld
 Rocky uses `firewalld` instead of UFW.
@@ -191,7 +191,7 @@ If you connect successfully, your Firewalld and SELinux port context configurati
 
 ---
 
-## 🔐 Phase 5: Password Policy & User Management
+## Phase 5: Password Policy & User Management
 
 The subject requires a highly strict password policy: passwords must expire every 30 days, have a minimum of 2 days between changes, send a 7-day warning, and require at least 10 characters with specific complexity (uppercase, lowercase, numeric, max 3 identical consecutive characters, no usernames, and 7 characters different from the previous password).
 
@@ -261,7 +261,7 @@ enforce_for_root
 
 ---
 
-## ⏱️ Phase 6: The Monitoring Script
+## Phase 6: The Monitoring Script
 The bash script to scrape system information relies entirely on standard Linux commands, so the script we wrote for Debian will work flawlessly on Rocky Linux without any changes!
 
 ### 1. Create the Script
@@ -350,7 +350,7 @@ You should see the wall broadcast pop up on your terminal instantly.
 
 ---
 
-## 🌟 Phase 7: Bonus Services (WordPress & FTP)
+## Phase 7: Bonus Services (WordPress & FTP)
 
 To achieve the bonus, we must set up a functional WordPress website using Lighttpd, MariaDB, and PHP (a LEMP stack) . We also need to configure an FTP service (vsftpd) and a security service (Fail2ban) to protect them.
 

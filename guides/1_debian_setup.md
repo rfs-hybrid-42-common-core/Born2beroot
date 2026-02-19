@@ -3,17 +3,17 @@
 This step-by-step guide will walk you through setting up a headless Debian virtual machine that perfectly satisfies both the mandatory and bonus requirements of the Born2beroot project.
 
 ## 📑 Table of Contents
-1. [Phase 1: Virtual Machine Creation](#-phase-1-virtual-machine-creation)
-2. [Phase 2: OS Installation & Encrypted LVM](#-phase-2-os-installation--encrypted-lvm-bonus-layout)
-3. [Phase 3: Base Configuration & Sudo Setup](#-phase-3-base-configuration--sudo-setup)
-4. [Phase 4: SSH & UFW (Firewall) Configuration](#-phase-4-ssh--ufw-firewall-configuration)
-5. [Phase 5: Password Policy & User Management](#-phase-5-password-policy--user-management)
-6. [Phase 6: The Monitoring Script](#-phase-6-the-monitoring-script)
-7. [Phase 7: Bonus Services (WordPress & FTP)](#-phase-7-bonus-services-wordpress--ftp)
+1. [💿 Phase 1: Virtual Machine Creation](#phase-1-virtual-machine-creation)
+2. [🏗️ Phase 2: OS Installation & Encrypted LVM](#phase-2-os-installation--encrypted-lvm-bonus-layout)
+3. [🛠️ Phase 3: Base Configuration & Sudo Setup](#phase-3-base-configuration--sudo-setup)
+4. [🛡️ Phase 4: SSH & UFW (Firewall) Configuration](#phase-4-ssh--ufw-firewall-configuration)
+5. [🔐 Phase 5: Password Policy & User Management](#phase-5-password-policy--user-management)
+6. [⏱️ Phase 6: The Monitoring Script](#phase-6-the-monitoring-script)
+7. [🌟 Phase 7: Bonus Services (WordPress & FTP)](#phase-7-bonus-services-wordpress--ftp)
 
 ---
 
-## 💿 Phase 1: Virtual Machine Creation
+## Phase 1: Virtual Machine Creation
 
 ### Prerequisite: Download the ISO
 Before starting, ensure you have downloaded the latest **Debian netinst ISO** (Network Installer) directly from the official Debian website (e.g., `debian-12.x.x-amd64-netinst.iso` or `debian-13.x.x`). Do not use the "Live" or "DVD" versions.
@@ -38,7 +38,7 @@ Before starting, ensure you have downloaded the latest **Debian netinst ISO** (N
 
 ---
 
-## 🏗️ Phase 2: OS Installation & Encrypted LVM (Bonus Layout)
+## Phase 2: OS Installation & Encrypted LVM (Bonus Layout)
 Start your virtual machine and select **Install** (do not select Graphical Install, as graphical interfaces are strictly forbidden).
 
 ### Basic Localization
@@ -115,7 +115,7 @@ During your defense, the evaluator will look at your partition layout and ask: *
 8. Install the GRUB boot loader to your primary drive (`/dev/sda`).
 9. Installation complete! Reboot your new headless server.
 
-## 🛠️ Phase 3: Base Configuration & Sudo Setup
+## Phase 3: Base Configuration & Sudo Setup
 Log into your new virtual machine using the `root` password you created during installation.
 
 ### 🧠 Evaluation Prep: Defending Your Partition Sizes (`lsblk`)
@@ -189,7 +189,7 @@ aa-status
 
 > **[Insert Screenshot: Output of `aa-status` showing that the AppArmor module is loaded]**
 
-## 🛡️ Phase 4: SSH & UFW (Firewall) Configuration
+## Phase 4: SSH & UFW (Firewall) Configuration
 
 ### 1. Configure the UFW Firewall
 We must install `ufw` and lock down the server so only port 4242 is open.
@@ -240,7 +240,7 @@ If you connect successfully, your port forwarding, firewall, and SSH configurati
 
 ---
 
-## 🔐 Phase 5: Password Policy & User Management
+## Phase 5: Password Policy & User Management
 
 The subject requires a highly strict password policy: passwords must expire every 30 days, have a minimum of 2 days between changes, send a 7-day warning, and require at least 10 characters with specific complexity (uppercase, lowercase, numeric, max 3 identical consecutive characters, no usernames, and 7 characters different from the previous password).
 
@@ -302,7 +302,7 @@ password requisite pam_pwquality.so retry=3 minlen=10 ucredit=-1 dcredit=-1 lcre
 
 ---
 
-## ⏱️ Phase 6: The Monitoring Script
+## Phase 6: The Monitoring Script
 
 The subject requires a bash script that broadcasts system information on all terminals every 10 minutes.
 
@@ -386,7 +386,7 @@ You should see the wall broadcast pop up on your terminal instantly.
 
 ---
 
-## 🌟 Phase 7: Bonus Services (WordPress & FTP)
+## Phase 7: Bonus Services (WordPress & FTP)
 
 To achieve the bonus, we must set up a functional WordPress website using Lighttpd, MariaDB, and PHP (a LEMP stack) . We also need to configure an FTP service (vsftpd) and a security service (Fail2ban) to protect them.
 

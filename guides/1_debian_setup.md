@@ -56,7 +56,15 @@ Start your virtual machine and select **Install** (do not select Graphical Insta
 
 ### Partitioning Disks (The Most Critical Step)
 To achieve the bonus score, you must set up 7 specific logical volumes. We will use a "smart" approach: we let Debian automatically configure the complex LUKS encryption, and then we manually carve out our specific volumes.
-
+```mermaid
+graph TD
+    A[Physical Drives /dev/sda] -->|Encrypted LUKS| B[Physical Volume PV]
+    B --> C[Volume Group VG: 'hostname-vg']
+    C --> D[Logical Volume LV: /root]
+    C --> E[Logical Volume LV: /home]
+    C --> F[Logical Volume LV: /var]
+    C --> G[Logical Volume LV: /srv...]
+```
 
 1. Select **Guided - use entire disk and set up encrypted LVM**.
 2. Select your 30GB VDI disk.
@@ -507,7 +515,7 @@ EXIT;
 We will download WordPress and place it inside the `/srv` partition we created during Phase 2.
 ```bash
 # Download the latest WordPress archive
-wget [https://wordpress.org/latest.tar.gz](https://wordpress.org/latest.tar.gz)
+wget https://wordpress.org/latest.tar.gz
 
 # Extract it directly into our bonus partition
 tar -xzvf latest.tar.gz -C /srv/
@@ -571,7 +579,18 @@ nano /etc/vsftpd.conf
 ```
 
 Find and modify (or add) the following lines to lock the FTP user into their directory securely. We must also define specific "Passive Mode" ports because VirtualBox's NAT network will block random data ports during file transfers:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server Command Port 21
+    participant Server Data Port 40000
 
+    Client->>Server Command Port 21: PASV (Request Passive Mode)
+    Note over Server Command Port 21: Server opens NAT port 40000
+    Server Command Port 21-->>Client: 227 Entering Passive Mode (127.0.0.1, Port 40000)
+    Client->>Server Data Port 40000: Connects for Data Transfer
+    Server Data Port 40000-->>Client: Transfer files (Directory List, Uploads)
+```
 
 ```plaintext
 listen=YES
@@ -677,11 +696,21 @@ Evaluators almost always ask you to change your server's hostname to `evaluator_
    ```bash
    sudo hostnamectl set-hostname new_hostname
    ```
+
 2. **Update the hosts file (CRITICAL):**
    ```bash
-   sudo nano /etc/hosts
+   sudo vi /etc/hosts
    ```
-   *Find your old hostname (usually next to `127.0.1.1`) and replace it with the new one.*
+   *Find your old hostname and replace it with the new one.*
+   ```bash
+   127.0.0.1   localhost
+   127.0.1.1   evaluator_name42   # <--- Change this line to your new hostname!
+  
+   ::1         localhost ip6-localhost ip6-loopback
+   ff02::1     ip6-allnodes
+   ff02::2     ip6-allrouters
+   ```
+
 3. **Reboot:**
    ```bash
    sudo reboot

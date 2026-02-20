@@ -10,6 +10,7 @@ This step-by-step guide will walk you through setting up a headless Debian virtu
 5. [🔐 Phase 5: Password Policy & User Management](#phase-5-password-policy--user-management)
 6. [⏱️ Phase 6: The Monitoring Script](#phase-6-the-monitoring-script)
 7. [🌟 Phase 7: Bonus Services (WordPress & FTP)](#phase-7-bonus-services-wordpress--ftp)
+8. [🎓 Appendix: The Ultimate Defense Cheat Sheet](#appendix-the-ultimate-defense-cheat-sheet)
 
 ---
 
@@ -694,6 +695,90 @@ The evaluator will demand that you prove these services are actually working. He
 > **[Insert Screenshot: The output of the fail2ban-client command showing the actively banned IP address]**
 
 ---
+
+## Appendix: The Ultimate Defense Cheat Sheet
+During your evaluation, you will be asked to perform live administrative tasks to prove you understand the system. Here are the exact commands you need to know by heart:
+
+### 1. System Identity & Version Verification
+The evaluator will ask you to prove you are running Debian and not a graphical interface.
+* **Check OS Version:** `cat /etc/os-release` or `hostnamectl`
+* **Check Debian Version:** `cat /etc/debian_version`
+* **Check AppArmor Status:** `aa-status`
+
+### 2. Changing the Hostname (Live Test)
+Evaluators almost always ask you to change your server's hostname to `evaluator_name42` and restart the machine to prove it persists.
+1. **Change the hostname:**
+   ```bash
+   sudo hostnamectl set-hostname new_hostname
+   ```
+3. **Update the hosts file (CRITICAL):**
+   ```bash
+   sudo nano /etc/hosts
+   ```
+   *Find your old hostname (usually next to `127.0.1.1`) and replace it with the new one.*
+4. **Reboot:**
+   ```bash
+   sudo reboot
+   ```
+
+### 3. User and Group Management
+The evaluator will ask you to create a new user (usually named after them), create a new group called `evaluating`, and verify the password policies.
+* **Create a new user:**
+  ```bash
+  sudo adduser new_username
+  ```
+  *(This command will automatically prompt you for the password and enforce your strict `difok` and length rules!)*
+* **Create a new group:**
+  ```bash
+  sudo addgroup evaluating
+  ```
+* **Add the user to the new group:**
+  ```bash
+  sudo usermod -aG evaluating new_username
+  ```
+* **Verify the user's groups:**
+  ```bash
+  groups new_username
+  ```
+* **Check a user's password expiration rules:**
+  ```bash
+  sudo chage -l new_username
+  ```
+
+### 4. Sudo Logging & Verification
+You must prove that every `sudo` action is being logged to your custom directory.
+* **View the sudo log:**
+  ```bash
+  sudo cat /var/log/sudo/sudo.log
+  ```
+* **View sudo actions in the system journal:**
+  ```bash
+  journalctl _COMM=sudo
+  ```
+
+### 5. Firewall (UFW) Management
+The evaluator will ask you to add a random port (like `8080`) to the firewall, verify it, and then delete it.
+* **Check UFW status and rule numbers:**
+  ```bash
+  sudo ufw status numbered
+  ```
+* **Open a new port:**
+  ```bash
+  sudo ufw allow 8080
+  ```
+* **Delete a rule by its number:**
+  ```bash
+  sudo ufw delete <rule_number>
+  ```
+
+### 6. The Monitoring Script Modification
+The evaluator will ask you to interrupt your `cron` job and make the script run every minute instead of every 10 minutes.
+* **Edit the crontab:**
+  ```bash
+  sudo crontab -e
+  ```
+* **Change the timer:** Change `*/10 * * * *` to `* * * * *`.
+* **Save and wait 60 seconds** to prove the broadcast triggers!
 
 **🎉 Congratulations!**
 

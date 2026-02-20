@@ -653,51 +653,10 @@ fail2ban-client status
 
 > **[Insert Screenshot: Output of `fail2ban-client status` showing both the sshd and vsftpd jails are active]**
 
-### 🧠 Evaluation Prep: Live Testing the Bonus Services
-The evaluator will demand that you prove these services are actually working. Here is the exact script to follow to demonstrate each service perfectly:
-
-#### Test 1: Lighttpd, PHP, and MariaDB (The WordPress Site)
-* **The Proof:** By successfully loading the WordPress site, you prove that all three of these services are working together seamlessly. Lighttpd is serving the web pages, PHP is processing the code, and MariaDB is storing the configuration.
-* **The Action:** 1. On your **Host Machine** (your physical computer), open a web browser.
-  2. Navigate to `http://localhost:8080` (ensure you mapped Host Port `8080` to Guest Port `80` in VirtualBox).
-  3. Show the evaluator the functioning WordPress site. Create a test post to prove the database is actively writing data!
-
-> **[Insert Screenshot: Your host machine's browser showing a published WordPress test post]**
-
-#### Test 2: vsftpd (File Transfer)
-* **The Proof:** You must show that the `ftpuser` can connect, upload a file, and is securely locked (chrooted) into the `/srv/wordpress` directory.
-* **The Action:**
-  1. In VirtualBox, add TWO new Port Forwarding rules. One for commands, and one for the Passive Mode data transfer:
-      * *FTP Commands:* Host Port: `2121` -> Guest Port: `21`
-      * *FTP Data:* Host Port: `40000` -> Guest Port: `40000`
-  3. On your **Host Machine**, open an FTP client (like FileZilla) or use the terminal: `ftp localhost 2121`.
-  4. Log in with the `ftpuser` credentials. 
-  5. Upload a random text file (e.g., `test_upload.txt`) or list the directory using `ls`.
-  6. On your **Virtual Machine**, navigate to `/srv/wordpress` and type `ls -l` to prove the file successfully arrived!
-
-> **[Insert Screenshot: Terminal on the VM showing the newly uploaded file sitting in the /srv/wordpress directory]**
-
-#### Test 3: Fail2ban (The Security Service)
-* **The Proof:** You must intentionally trigger Fail2ban to prove it is actively monitoring logs and blocking malicious attacks.
-* **The Action:**
-  1. On your **Host Machine**, open a terminal and try to SSH into your server: `ssh maaugust@localhost -p 4242`.
-  2. Intentionally type the **WRONG password** 3 to 5 times until the connection drops or hangs.
-  3. On your **Virtual Machine**, check the Fail2ban status:
-     ```bash
-     sudo fail2ban-client status sshd
-     ```
-  4. You will see your Host Machine's gateway IP (usually `10.0.2.2`) listed under **Banned IP list**!
-  5. **To unban yourself (so you can use SSH again):**
-     ```bash
-     sudo fail2ban-client set sshd unbanip 10.0.2.2
-     ```
-
-> **[Insert Screenshot: The output of the fail2ban-client command showing the actively banned IP address]**
-
 ---
 
 ## Appendix: The Ultimate Defense Cheat Sheet
-During your evaluation, you will be asked to perform live administrative tasks to prove you understand the system. Here are the exact commands you need to know by heart:
+During your evaluation, you will be asked to perform live administrative tasks to prove you understand the system. Here are the exact commands and live tests you need to know by heart:
 
 ### 1. System Identity & Version Verification
 The evaluator will ask you to prove you are running Debian and not a graphical interface.
@@ -711,12 +670,12 @@ Evaluators almost always ask you to change your server's hostname to `evaluator_
    ```bash
    sudo hostnamectl set-hostname new_hostname
    ```
-3. **Update the hosts file (CRITICAL):**
+2. **Update the hosts file (CRITICAL):**
    ```bash
    sudo nano /etc/hosts
    ```
    *Find your old hostname (usually next to `127.0.1.1`) and replace it with the new one.*
-4. **Reboot:**
+3. **Reboot:**
    ```bash
    sudo reboot
    ```
@@ -779,6 +738,25 @@ The evaluator will ask you to interrupt your `cron` job and make the script run 
   ```
 * **Change the timer:** Change `*/10 * * * *` to `* * * * *`.
 * **Save and wait 60 seconds** to prove the broadcast triggers!
+
+### 7. Live Testing the Bonus Services
+If you did the bonus, the evaluator will demand that you prove these services are actually working. Here is the exact script to follow to demonstrate each service perfectly:
+
+#### Test A: Lighttpd, PHP, and MariaDB (The WordPress Site)
+* **The Proof:** By successfully loading the WordPress site, you prove that all three of these services are working together seamlessly. Lighttpd is serving the web pages, PHP is processing the code, and MariaDB is storing the configuration.
+* **The Action:** 1. On your **Host Machine** (your physical computer), open a web browser.
+  2. Navigate to `http://localhost:8080` (ensure you mapped Host Port `8080` to Guest Port `80` in VirtualBox).
+  3. Show the evaluator the functioning WordPress site. Create a test post to prove the database is actively writing data!
+
+#### Test B: vsftpd (File Transfer)
+* **The Proof:** You must show that the `ftpuser` can connect, upload a file, and is securely locked (chrooted) into the `/srv/wordpress` directory.
+* **The Action:**
+  1. On your **Host Machine**, open an FTP client (like FileZilla) or use the terminal: `ftp localhost 2121`.
+  2. Log in with the `ftpuser` credentials. 
+  3. Upload a random text file (e.g., `test_upload.txt`) or list the directory using `ls`.
+  4. On your **Virtual Machine**, navigate to `/srv/wordpress` and type `ls -l` to prove the file successfully arrived!
+
+####
 
 **🎉 Congratulations!**
 

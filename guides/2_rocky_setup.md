@@ -645,7 +645,7 @@ Evaluators almost always ask you to change your server's hostname.
    ff02::2     ip6-allrouters
    ```
    
-4. **Reboot:**
+3. **Reboot:**
    ```bash
    sudo reboot
    ```

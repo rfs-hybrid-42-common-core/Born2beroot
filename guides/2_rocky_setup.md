@@ -54,7 +54,6 @@ Start your virtual machine and select **Install Rocky Linux**. Rocky uses the "A
 ### Partitioning Disks (The Most Critical Step)
 To achieve the bonus score, you must set up 7 specific logical volumes. 
 
-
 1. Click **Installation Destination**.
 2. Select your 30GB disk. Under Storage Configuration, select **Custom**, then click **Done** at the top left.
 3. A new menu opens. Change the dropdown from "LVM" to **LVM Thin Provisioning** or standard **LVM** (Standard LVM is recommended for this project). Check the **Encrypt** box.
@@ -206,7 +205,6 @@ If you connect successfully, your Firewalld and SELinux port context configurati
 ---
 
 ## Phase 5: Password Policy & User Management
-
 The subject requires a highly strict password policy: passwords must expire every 30 days, have a minimum of 2 days between changes, send a 7-day warning, and require at least 10 characters with specific complexity (uppercase, lowercase, numeric, max 3 identical consecutive characters, no usernames, and 7 characters different from the previous password).
 
 ### 1. Configure Password Expiration (Aging)
@@ -226,7 +224,6 @@ PASS_WARN_AGE   7
 Save and exit.
 
 Because `/etc/login.defs` only applies to users created after this change, we must manually apply these rules to the users we already created (`root` and `maaugust`):
-
 ```bash
 # Apply to root
 sudo chage -m 2 -M 30 -W 7 root
@@ -358,7 +355,6 @@ You should see the wall broadcast pop up on your terminal instantly.
 ---
 
 ## Phase 7: Bonus Services (WordPress & FTP)
-
 To achieve the bonus, we must set up a functional WordPress website using Lighttpd, MariaDB, and PHP (a LEMP stack) . We also need to configure an FTP service (vsftpd) and a security service (Fail2ban) to protect them.
 
 ### 🧠 Evaluation Prep: Defending Your Bonus Choices
@@ -515,8 +511,6 @@ sudo vi /etc/vsftpd/vsftpd.conf
 ```
 
 Find and modify (or add) these specific lines to lock the FTP user in securely and force Passive Mode for the NAT connection:
-
-
 ```plaintext
 listen=YES
 listen_ipv6=NO
@@ -620,6 +614,7 @@ Evaluators almost always ask you to change your server's hostname.
    sudo vi /etc/hosts
    ```
    *Find your old hostname and replace it with the new one.*
+   
 3. **Reboot:**
    ```bash
    sudo reboot

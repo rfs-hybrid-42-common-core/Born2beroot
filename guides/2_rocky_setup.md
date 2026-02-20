@@ -10,6 +10,7 @@ This step-by-step guide will walk you through setting up a headless Rocky Linux 
 5. [🔐 Phase 5: Password Policy & User Management](#phase-5-password-policy--user-management)
 6. [⏱️ Phase 6: The Monitoring Script](#phase-6-the-monitoring-script)
 7. [🌟 Phase 7: Bonus Services (WordPress & FTP)](#phase-7-bonus-services-wordpress--ftp)
+8. [🎓 Appendix: The Ultimate Defense Cheat Sheet](#appendix-the-ultimate-defense-cheat-sheet)
 
 ---
 
@@ -23,15 +24,16 @@ Ensure you have downloaded the **Rocky Linux Minimal ISO** directly from the off
 2. **Name:** Enter your machine name (e.g., `maaugust_born2beroot_rocky`).
 3. **ISO Image:** Choose the `Rocky-minimal.iso` file you just downloaded.
 4. ⚠️ **CRITICAL STEP:** You MUST check the box that says **Skip Unattended Installation**.
-5. Click **Next**. Allocate at least **1024 MB** of RAM and 1 CPU.
+5. Click **Next**. Allocate at least **4096 MB** of RAM and 4 CPU.
 6. Click **Next**. Create a **30 GB** dynamically allocated Virtual Hard Disk (required for the bonus layout). Click **Finish**.
 7. Select your newly created VM and click **Settings**.
 8. Go to **Network** and ensure Adapter 1 is set to **NAT**. Click **Advanced** and set up **Port Forwarding**:
    * **SSH:** Host Port `4242` -> Guest Port `4242`
    * **HTTP (Bonus):** Host Port `8080` -> Guest Port `80`
-   * **FTP (Bonus):** Host Port `2121` -> Guest Port `21`
+   * **FTP Command (Bonus):** Host Port `2121` -> Guest Port `21`
+   * **FTP Data (Bonus):** Host Port `40000` -> Guest Port `40000`
 
-> **[Insert Screenshot: VirtualBox Port Forwarding Rules showing the three port mappings]**
+> **[Insert Screenshot: VirtualBox Port Forwarding Rules showing all four port mappings]**
 
 ---
 
@@ -50,9 +52,11 @@ Start your virtual machine and select **Install Rocky Linux**. Rocky uses the "A
 > **[Insert Screenshot: Software Selection screen showing Minimal Install]**
 
 ### Partitioning Disks (The Most Critical Step)
+To achieve the bonus score, you must set up 7 specific logical volumes. 
+
+
 1. Click **Installation Destination**.
 2. Select your 30GB disk. Under Storage Configuration, select **Custom**, then click **Done** at the top left.
-
 3. A new menu opens. Change the dropdown from "LVM" to **LVM Thin Provisioning** or standard **LVM** (Standard LVM is recommended for this project). Check the **Encrypt** box.
 4. Click the blue link: **"Click here to create them automatically"**. Enter your Encryption Passphrase.
 5. Anaconda will generate default partitions. **You must delete the `/home` and `/` (root) partitions to redistribute the space manually.**
@@ -74,6 +78,16 @@ Start your virtual machine and select **Install Rocky Linux**. Rocky uses the "A
 
 ## Phase 3: Base Configuration & Sudo Setup
 Log in with your user account (`maaugust`) and your user password. Since you checked "Make this user administrator," you can use `sudo`.
+
+### 🧠 Evaluation Prep: Defending Your Partition Sizes (`lsblk`)
+Before installing packages, run the following command to view your new partition layout:
+```bash
+lsblk
+```
+
+**The Trap:** The evaluator will look at your output and ask: *"You said you made the root partition 10G, so why does `lsblk` say 9.3G?"*
+
+**The Defense:** > "This happens because of the difference between Base-10 (Gigabytes) and Base-2 (Gibibytes). When I typed `10G` in the installer, it calculated it in standard decimal Gigabytes ($10 \times 1000^3$ bytes). However, the `lsblk` command displays output in binary Gibibytes ($1024^3$ bytes). If you do the math, $10,000,000,000 / 1024^3 \approx 9.31$ GiB. The sizes are mathematically exact!"
 
 ### 1. Update the System
 Rocky Linux uses `dnf` instead of `apt`.
@@ -253,11 +267,9 @@ enforce_for_root
 * `minlen=10`: Minimum 10 characters.
 * `ucredit=-1`, `dcredit=-1`, `lcredit=-1`: Requires at least one uppercase, digit, and lowercase letter.
 * `maxrepeat=3`: Denies more than 3 consecutive identical characters.
-* `reject_username`: Prevents the password from containing the user's name.
+* `usercheck=1`: Prevents the password from containing the user's name.
 * `difok=7`: Requires at least 7 characters that are different from the old password.
 * `enforce_for_root`: Ensures the root user is also bound by these strict complexity rules.
-
-> **[Insert Screenshot: The modified common-password file showing the long pwquality.so line]**
 
 ---
 
@@ -279,7 +291,7 @@ pcpu=$(grep "physical id" /proc/cpuinfo | sort -u | wc -l)
 vcpu=$(grep "^processor" /proc/cpuinfo | wc -l)
 ram=$(free -m | awk '$1 == "Mem:" {printf "%d/%dMB (%.2f%%)", $3, $2, $3/$2*100}')
 disk=$(df -m | grep "^/dev/" | grep -v "/boot$" | awk '{ut += $3; tt += $2} END {printf "%d/%dGb (%d%%)", ut, tt/1024, ut/tt*100}')
-cpul=$(top -bn1 | grep '^%Cpu' | awk '{printf "%.1f%%", 100 - $8}')
+cpul=$(LC_ALL=C top -bn1 | grep '^%Cpu' | tr ',' ' ' | awk '{printf "%.1f%%", 100 - $8}')
 lb=$(who -b | awk '$1 == "system" {print $3 " " $4}')
 lvmu=$(if [ $(lsblk | grep "lvm" | wc -l) -gt 0 ]; then echo yes; else echo no; fi)
 tcpc=$(ss -ta | grep ESTAB | wc -l)
@@ -308,7 +320,7 @@ sudo chmod +x /usr/local/bin/monitoring.sh
 ```
 
 ### 2. Schedule the Script with Cron
-We will use `cron` to execute this script. Just like in Debian, we will use an advanced configuration to ensure it triggers at **startup** and exactly every 10 minutes **from the boot time**.
+We will use `cron` to execute this script at server startup AND every 10 minutes. To ensure it perfectly aligns with your server's exact boot time, we will use a dynamic sleep offset.
 
 Rocky minimal might require installing the cron daemon manually:
 ```bash
@@ -321,22 +333,17 @@ Now, open the root crontab:
 sudo crontab -e
 ```
 
-Add the following rules:
+Add the following TWO lines:
 ```plaintext
 @reboot /usr/local/bin/monitoring.sh
-* * * * * min=$(cat /proc/uptime | awk '{print int($1/60)}'); if [ "$min" -gt 0 ] && [ "$((min \% 10))" -eq 0 ]; then /usr/local/bin/monitoring.sh; fi
+*/10 * * * * sleep $(who -b | awk '{split($4, time, ":"); print time[2]\%10}')m && /usr/local/bin/monitoring.sh
 ```
 
 Save and exit.
 
 **🧠 Explanation for your defense:**
-* `@reboot`: Fulfills the "At server startup" requirement.
-* `* * * * *`: Forces cron to run a check every single minute.
-* `min=$(cat /proc/uptime...)`: Calculates exactly how many minutes the server has been alive.
-* `$((min \% 10)) -eq 0`: Checks if the uptime in minutes is a multiple of 10. If it is, it executes the script!
-> *(Note: You must explain to the evaluator that the `%` modulo operator is escaped with a backslash `\%`. If you don't escape it, cron reads `%` as a newline character and the script will fail!)*
-
-> **[Insert Screenshot: The crontab file showing both the @reboot and the uptime rules]**
+* **The `@reboot` line:** Guarantees the script broadcasts immediately when the server boots.
+* **The `*/10` line:** We calculate the exact minute your server booted. If it booted at `17:48`, `48 % 10 = 8`. Cron triggers every 10 minutes on the clock (e.g. `18:00`), but the `sleep 8m` forces it to wait exactly 8 minutes, firing perfectly at `18:08` to match your uptime!
 
 ### 3. Verify the Script
 To ensure it works without waiting 10 minutes, run it manually:
@@ -364,11 +371,12 @@ During the defense, the evaluator will ask you to explain exactly what these ser
 * **Fail2ban (The "Free-Choice" Service):** An active intrusion prevention framework . I chose this as my extra service because it perfectly aligns with the project's core theme of extreme server security. By opening new ports (80 and 21), we increased our attack surface. Fail2ban monitors our service logs in real-time and automatically bans the IP addresses of attackers trying to brute-force our SSH or FTP passwords.
 
 ### 1. Update the Firewall
-Our new services need specific ports open to communicate with the outside world.
+Our new services need specific ports open to communicate with the outside world, including our custom FTP Passive mode data port (40000).
 ```bash
 # Allow HTTP (Web Server) and FTP
 sudo firewall-cmd --permanent --add-port=80/tcp
 sudo firewall-cmd --permanent --add-port=21/tcp
+sudo firewall-cmd --permanent --add-port=40000/tcp
 sudo firewall-cmd --reload
 
 # Verify the new rules
@@ -420,21 +428,21 @@ sudo systemctl enable --now lighttpd mariadb php-fpm
 ### 3. Configure the MariaDB Database
 Secure the database installation:
 ```bash
-sudo mysql_secure_installation
+sudo mariadb-secure-installation
 ```
 
 *(Press `Enter` for current password, then answer `Y` to set a root password and `Y` to all subsequent security questions).*
 
 Next, log into the MySQL console to create the WordPress database and user:
 ```bash
-mysql -u root -p
+mariadb -u root -p
 ```
 
 Run the following SQL commands exactly as written:
 ```sql
 CREATE DATABASE wordpress;
-CREATE USER 'wp_user'@'localhost' IDENTIFIED BY 'YourStrongPassword123!';
-GRANT ALL PRIVILEGES ON wordpress.* TO 'wp_user'@'localhost';
+CREATE USER 'maaugust'@'localhost' IDENTIFIED BY '12345';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'maaugust'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -488,8 +496,8 @@ sudo vi /srv/wordpress/wp-config.php
 Update these three specific lines with your database info:
 ```php
 define( 'DB_NAME', 'wordpress' );
-define( 'DB_USER', 'wp_user' );
-define( 'DB_PASSWORD', 'YourStrongPassword123!' );
+define( 'DB_USER', 'maaugust' );
+define( 'DB_PASSWORD', '12345' );
 ```
 
 Save and exit. Test it on your Host Machine browser at `http://localhost:8080`!
@@ -506,8 +514,12 @@ Configure the FTP daemon:
 sudo vi /etc/vsftpd/vsftpd.conf
 ```
 
-Modify these specific lines to lock the FTP user in securely:
+Find and modify (or add) these specific lines to lock the FTP user in securely and force Passive Mode for the NAT connection:
+
+
 ```plaintext
+listen=YES
+listen_ipv6=NO
 anonymous_enable=NO
 local_enable=YES
 write_enable=YES
@@ -516,6 +528,12 @@ allow_writeable_chroot=YES
 userlist_enable=YES
 userlist_file=/etc/vsftpd/user_list
 userlist_deny=NO
+
+# VirtualBox NAT Passive Mode Fix
+pasv_enable=YES
+pasv_min_port=40000
+pasv_max_port=40000
+pasv_address=127.0.0.1
 ```
 
 Save and exit.
@@ -556,20 +574,24 @@ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
 sudo vi /etc/fail2ban/jail.local
 ```
 
-Scroll down to the `[sshd]` section and make sure it is enabled on our custom port:
+*(This file is massive! Press `/` in `vi` to search for the specific headers).*
+
+**1. Enable the SSH Jail:**
+Press `/`, type `\[sshd\]`, and press Enter. Add `enabled = true` under it and fix the port:
 ```plaintext
 [sshd]
 enabled = true
 port    = 4242
 ```
 
-Scroll down to the `[vsftpd]` section and enable it as well:
+**2. Enable the FTP Jail:**
+Press `/`, type `\[vsftpd\]`, and press Enter. Add `enabled = true`:
 ```plaintext
 [vsftpd]
 enabled = true
 ```
 
-Save and exit. Restart the service:
+Save and exit (`:wq`). Restart the service:
 ```bash
 sudo systemctl enable --now fail2ban
 sudo fail2ban-client status
@@ -577,39 +599,94 @@ sudo fail2ban-client status
 
 > **[Insert Screenshot: Output of `fail2ban-client status` showing the active jails]**
 
-### 7. Evaluation Prep: Live Testing the Bonus Services
-Follow these exact steps during your defense to prove your services work:
+---
 
-**Test 1: The WordPress Site**
-1. On your **Host Machine**, navigate to `http://localhost:8080`.
-2. Show the evaluator the functioning WordPress site. Create a test post to prove the database is actively writing data!
+## Appendix: The Ultimate Defense Cheat Sheet
+During your evaluation, you will be asked to perform live administrative tasks to prove you understand the system. Here are the exact Rocky Linux commands you need to know by heart:
 
-> **[Insert Screenshot: A published WordPress test post]**
+### 1. System Identity & Version Verification
+The evaluator will ask you to prove you are running Rocky Linux and not a GUI.
+* **Check OS Version:** `cat /etc/os-release` or `hostnamectl`
+* **Check SELinux Status:** `sestatus`
 
-**Test 2: vsftpd (File Transfer)**
-1. On your **Host Machine**, open an FTP client (like FileZilla) or terminal: `ftp localhost 2121`.
-2. Log in with the `ftpuser` credentials. Upload a text file (e.g., `test_upload.txt`).
-3. On your **Virtual Machine**, type `ls -l /srv/wordpress` to prove the file successfully arrived!
+### 2. Changing the Hostname (Live Test)
+Evaluators almost always ask you to change your server's hostname.
+1. **Change the hostname:**
+   ```bash
+   sudo hostnamectl set-hostname new_hostname
+   ```
+2. **Update the hosts file (CRITICAL):**
+   ```bash
+   sudo vi /etc/hosts
+   ```
+   *Find your old hostname and replace it with the new one.*
+3. **Reboot:**
+   ```bash
+   sudo reboot
+   ```
 
-> **[Insert Screenshot: Terminal showing the newly uploaded file in /srv/wordpress]**
+### 3. User and Group Management
+* **Create a new user:** `sudo adduser new_username`
+* **Set the user's password:** `sudo passwd new_username`
+* **Create a new group:** `sudo groupadd evaluating`
+* **Add user to group:** `sudo usermod -aG evaluating new_username`
+* **Verify user's groups:** `groups new_username`
+* **Check password expiration:** `sudo chage -l new_username`
 
-**Test 3: Fail2ban (The Security Service)**
-1. On your **Host Machine**, try to SSH into your server: `ssh maaugust@localhost -p 4242`.
+### 4. Sudo Logging & Verification
+* **View the sudo log:** `sudo cat /var/log/sudo/sudo.log`
+* **View sudo actions in the journal:** `journalctl _COMM=sudo`
+
+### 5. Firewalld Management
+The evaluator will ask you to add a port (e.g., `8080`), verify it, and delete it.
+* **Check active rules:**
+  ```bash
+  sudo firewall-cmd --list-all
+  ```
+* **Open a new port temporarily for testing:**
+  ```bash
+  sudo firewall-cmd --add-port=8080/tcp
+  ```
+* **Remove the rule:**
+  ```bash
+  sudo firewall-cmd --remove-port=8080/tcp
+  ```
+
+### 6. The Monitoring Script Modification
+The evaluator will ask you to make the script run every minute instead of every 10 minutes.
+* **Edit the crontab:** `sudo crontab -e`
+* **Change the timer:** Change `*/10 * * * *` to `* * * * *` (and remove the `sleep` command).
+* **Save and wait 60 seconds** to prove the broadcast triggers!
+
+### 7. Live Testing the Bonus Services
+If you did the bonus, follow this script to demonstrate the services perfectly:
+
+#### Test A: Lighttpd, PHP, and MariaDB
+1. On your **Host Machine** (your physical computer), open a web browser.
+2. Navigate to `http://localhost:8080`.
+3. Show the evaluator the functioning WordPress site and create a test post.
+
+#### Test B: vsftpd (File Transfer)
+1. On your **Host Machine**, open an FTP client (like FileZilla) or use the terminal: `ftp localhost 2121`.
+2. Log in with the `ftpuser` credentials. 
+3. Upload a random text file (e.g., `test_upload.txt`).
+4. On your **Virtual Machine**, navigate to `/srv/wordpress` and type `ls -l` to prove the file successfully arrived!
+
+#### Test C: Fail2ban (The Security Service)
+1. On your **Host Machine**, open a terminal and try to SSH into your server: `ssh maaugust@localhost -p 4242`.
 2. Intentionally type the **WRONG password** 3 to 5 times.
 3. On your **Virtual Machine**, check the Fail2ban status:
-```bash
-sudo fail2ban-client status sshd
-```
-4. Point out your Host's gateway IP in the **Banned IP list**.
+   ```bash
+   sudo fail2ban-client status sshd
+   ```
+4. You will see your Host Machine's gateway IP listed under **Banned IP list**!
 5. **To unban yourself:**
-```bash
-sudo fail2ban-client set sshd unbanip 10.0.2.2
-```
-
-> **[Insert Screenshot: fail2ban-client showing the banned IP address]**
+   ```bash
+   sudo fail2ban-client set sshd unbanip <banned_ip_address>
+   ```
 
 ---
 
 **🎉 Congratulations!**
 
-If you have followed this guide, you have successfully conquered the notorious SELinux and built a completely fortified, enterprise-grade Rocky Linux server. You are ready to ace the Born2beroot evaluation!
+If you have followed this guide, you have successfully conquered the notorious SELinux and built a completely fortified, enterprise-grade Rocky Linux server. You are fully prepared to pass the Born2beroot evaluation with a **125% Bonus score**!

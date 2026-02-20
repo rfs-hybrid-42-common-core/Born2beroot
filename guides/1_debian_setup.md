@@ -57,6 +57,7 @@ Start your virtual machine and select **Install** (do not select Graphical Insta
 ### Partitioning Disks (The Most Critical Step)
 To achieve the bonus score, you must set up 7 specific logical volumes. We will use a "smart" approach: we let Debian automatically configure the complex LUKS encryption, and then we manually carve out our specific volumes.
 
+
 1. Select **Guided - use entire disk and set up encrypted LVM**.
 2. Select your 30GB VDI disk.
 3. Select **Separate /home, /var, and /tmp partitions**.
@@ -101,7 +102,7 @@ Now, we must assign file systems and mount points to the 7 logical volumes we ju
 During your defense, the evaluator will look at your partition layout and ask: *"Your Logical Volumes only add up to about 28.2G, but your encrypted container is 29G. Why did you leave ~900MB unallocated? And why use LVM at all?"*
 
 **Here is exactly how you answer for maximum points:**
-> "The primary advantage of Logical Volume Management (LVM) is flexibility. Standard partitions are permanently locked in size, but LVM abstracts this into a flexible pool . In system administration, it is a best practice to never allocate 100% of your Volume Group. I intentionally left that ~900MB of free space unallocated. If my `/var/log` partition ever gets completely full of system logs in the future, I can use the `lvextend` command to instantly grab that unallocated space and expand the partition on the fly. Furthermore, LVM requires unallocated space if you ever want to create live LVM snapshots for backups!"
+> "The primary advantage of Logical Volume Management (LVM) is flexibility. Standard partitions are permanently locked in size, but LVM abstracts this into a flexible pool. In system administration, it is a best practice to never allocate 100% of your Volume Group. I intentionally left that ~900MB of free space unallocated. If my `/var/log` partition ever gets completely full of system logs in the future, I can use the `lvextend` command to instantly grab that unallocated space and expand the partition on the fly. Furthermore, LVM requires unallocated space if you ever want to create live LVM snapshots for backups!"
 
 ### Software Selection
 1. Scan extra installation media? `<No>`.
@@ -116,6 +117,8 @@ During your defense, the evaluator will look at your partition layout and ask: *
 
 8. Install the GRUB boot loader to your primary drive (`/dev/sda`).
 9. Installation complete! Reboot your new headless server.
+
+---
 
 ## Phase 3: Base Configuration & Sudo Setup
 Log into your new virtual machine using the `root` password you created during installation.
@@ -193,6 +196,8 @@ aa-status
 ```
 
 > **[Insert Screenshot: Output of `aa-status` showing that the AppArmor module is loaded]**
+
+---
 
 ## Phase 4: SSH & UFW (Firewall) Configuration
 
@@ -426,7 +431,7 @@ You should see the wall broadcast pop up on your terminal instantly.
 
 ## Phase 7: Bonus Services (WordPress & FTP)
 
-To achieve the bonus, we must set up a functional WordPress website using Lighttpd, MariaDB, and PHP (a LEMP stack) . We also need to configure an FTP service (vsftpd) and a security service (Fail2ban) to protect them.
+To achieve the bonus, we must set up a functional WordPress website using Lighttpd, MariaDB, and PHP (a LEMP stack). We also need to configure an FTP service (vsftpd) and a security service (Fail2ban) to protect them.
 
 ### 🧠 Evaluation Prep: Defending Your Bonus Choices
 During the defense, the evaluator will ask you to explain exactly what these services do and **why you chose them** (especially your "free-choice" service). Here is how you answer to secure those points:
@@ -435,7 +440,7 @@ During the defense, the evaluator will ask you to explain exactly what these ser
 * **MariaDB (Database):** A fully open-source, highly secure, drop-in replacement for MySQL. It is required to store all of WordPress's dynamic data, user accounts, and settings.
 * **PHP:** A server-side scripting language. Since the core of WordPress is written in PHP, this processor is mandatory to dynamically generate the HTML web pages and communicate with the MariaDB database.
 * **vsftpd (File Transfer):** Stands for "Very Secure FTP Daemon". I chose this because of its incredibly strict security defaults. It allows us to easily "jail" (chroot) our FTP user, guaranteeing they can only upload files to the `/srv/wordpress` directory and cannot access the rest of the server.
-* **Fail2ban (The "Free-Choice" Service):** An active intrusion prevention framework . I chose this as my extra service because it perfectly aligns with the project's core theme of extreme server security. Because the bonus requires us to open new ports (80 and 21) to the outside world, we increased our attack surface. Fail2ban monitors our service logs in real-time and automatically bans the IP addresses of attackers trying to brute-force our SSH or FTP passwords.
+* **Fail2ban (The "Free-Choice" Service):** An active intrusion prevention framework. I chose this as my extra service because it perfectly aligns with the project's core theme of extreme server security. Because the bonus requires us to open new ports (80 and 21) to the outside world, we increased our attack surface. Fail2ban monitors our service logs in real-time and automatically bans the IP addresses of attackers trying to brute-force our SSH or FTP passwords.
 
 ### 1. Update the Firewall
 Our new services need specific ports open to communicate with the outside world.
@@ -502,7 +507,7 @@ EXIT;
 We will download WordPress and place it inside the `/srv` partition we created during Phase 2.
 ```bash
 # Download the latest WordPress archive
-wget https://wordpress.org/latest.tar.gz
+wget [https://wordpress.org/latest.tar.gz](https://wordpress.org/latest.tar.gz)
 
 # Extract it directly into our bonus partition
 tar -xzvf latest.tar.gz -C /srv/
@@ -566,6 +571,8 @@ nano /etc/vsftpd.conf
 ```
 
 Find and modify (or add) the following lines to lock the FTP user into their directory securely. We must also define specific "Passive Mode" ports because VirtualBox's NAT network will block random data ports during file transfers:
+
+
 ```plaintext
 listen=YES
 listen_ipv6=NO
@@ -656,7 +663,7 @@ fail2ban-client status
 ---
 
 ## Appendix: The Ultimate Defense Cheat Sheet
-During your evaluation, you will be asked to perform live administrative tasks to prove you understand the system. Here are the exact commands and live tests you need to know by heart:
+During your evaluation, you will be asked to perform live administrative tasks to prove you understand the system. Here are the exact commands you need to know by heart:
 
 ### 1. System Identity & Version Verification
 The evaluator will ask you to prove you are running Debian and not a graphical interface.
@@ -756,8 +763,20 @@ If you did the bonus, the evaluator will demand that you prove these services ar
   3. Upload a random text file (e.g., `test_upload.txt`) or list the directory using `ls`.
   4. On your **Virtual Machine**, navigate to `/srv/wordpress` and type `ls -l` to prove the file successfully arrived!
 
-####
+#### Test C: Fail2ban (The Security Service)
+* **The Proof:** You must intentionally trigger Fail2ban to prove it is actively monitoring logs and blocking malicious attacks.
+* **The Action:**
+  1. On your **Host Machine**, open a terminal and try to SSH into your server: `ssh maaugust@localhost -p 4242`.
+  2. Intentionally type the **WRONG password** 3 to 5 times until the connection drops or hangs.
+  3. On your **Virtual Machine**, check the Fail2ban status:
+     ```bash
+     sudo fail2ban-client status sshd
+     ```
+  4. You will see your Host Machine's gateway IP (usually `10.0.2.2`) listed under **Banned IP list**!
+  5. **To unban yourself (so you can use SSH again):**
+     ```bash
+     sudo fail2ban-client set sshd unbanip 10.0.2.2
+     ```
 
 **🎉 Congratulations!**
-
 If you have followed this guide exactly, your Debian server is a perfectly secure, automated, and strictly partitioned masterpiece. You are fully prepared to pass the Born2beroot evaluation with a **125% Bonus score**!

@@ -32,7 +32,8 @@ Before starting, ensure you have downloaded the latest **Debian netinst ISO** (N
 8. Go to **Network** and ensure Adapter 1 is set to **NAT**. Click **Advanced** and set up **Port Forwarding**:
    * **SSH:** Host Port `4242` -> Guest Port `4242`
    * **HTTP (Bonus):** Host Port `8080` -> Guest Port `80`
-   * **FTP (Bonus):** Host Port `2121` -> Guest Port `21`
+   * **FTP Command (Bonus):** Host Port `2121` -> Guest Port `21`
+   * **FTP Data (Bonus):** Host Port `40000` -> Guest Port `40000`
 
 > **[Insert Screenshot: VirtualBox Port Forwarding Rules showing the 4242 mapping]**
 
@@ -402,9 +403,7 @@ Add the following line to the bottom of the file. This calculates the exact minu
 
 Save and exit.
 
-
-
-**🧠 Evaluation Prep: Explaining the Cron Job**
+### 🧠 Evaluation Prep: Explaining the Cron Job
 * **The `@reboot` line:** This guarantees the script broadcasts immediately when the server finishes turning on, fulfilling the "At server startup" rule.
 * **The `*/10` line:** During your defense, the evaluator will ask you to change the script to run every minute instead of every 10 minutes without modifying the `monitoring.sh` script itself.
   * **The Solution:** Just type `crontab -e` and change the `*/10` to `*`.
@@ -443,9 +442,6 @@ Our new services need specific ports open to communicate with the outside world.
 # Allow HTTP (Web Server)
 ufw allow 80
 
-# Allow FTP (File Transfer Protocol)
-ufw allow 21
-
 # Verify the new rules
 ufw status numbered
 ```
@@ -464,14 +460,19 @@ systemctl restart lighttpd
 ```
 
 ### 3. Configure the MariaDB Database
-WordPress needs a database to store its posts, users, and settings. First, let's secure the database installation:
+WordPress needs a database to store its posts, users, and settings. First, let's ensure MariaDB is installed on your system before trying to configure it:
 ```bash
-mysql_secure_installation
+apt install mariadb-server -y
+```
+
+Next, run the modern MariaDB security script to lock down the default vulnerabilities:
+```bash
+mariadb-secure-installation
 ```
 
 * **Enter current password for root: Press `Enter` (it's blank by default).**
 * **Switch to unix_socket authentication: `n`**
-* **Change the root password: `Y` (Set a strong password).**
+* **Change the root password: `n`**
 * **Remove anonymous users: `Y`**
 * **Disallow root login remotely: `Y`**
 * **Remove test database: `Y`**
@@ -487,8 +488,9 @@ Run the following SQL commands exactly as written (don't forget the semicolons!)
 
 ```sql
 CREATE DATABASE wordpress;
-CREATE USER 'wp_user'@'localhost' IDENTIFIED BY 'YourStrongPassword123!';
-GRANT ALL PRIVILEGES ON wordpress.* TO 'wp_user'@'localhost';
+SHOW DATABASES;
+CREATE USER 'maaugust'@'localhost' IDENTIFIED BY '12345';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'maaugust'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -535,11 +537,19 @@ nano /srv/wordpress/wp-config.php
 Update these three specific lines with the database info you created in Step 3:
 ```php
 define( 'DB_NAME', 'wordpress' );
-define( 'DB_USER', 'wp_user' );
-define( 'DB_PASSWORD', 'YourStrongPassword123!' );
+define( 'DB_USER', 'maaugust' );
+define( 'DB_PASSWORD', '12345' );
 ```
 
-Save and exit. Now, test it! Open a web browser on your Host Machine and go to `http://localhost:8080` (You will need to add a VirtualBox port forwarding rule mapping Host Port `8080` to Guest Port `80`). You should see the WordPress installation screen!
+Save and exit. Now, test it! Open a web browser on your Host Machine and go to `http://localhost:8080` (You will need to add a VirtualBox port forwarding rule mapping Host Port `8080` to Guest Port `80`). You should be greeted the WordPress installation screen. Fill out the required information to populate your database:
+* **Site Title:** `maaugust's Born2beRoot` (or anything you like)
+* **Username:** `maaugust` (It is best practice not to use "admin")
+* **Password:** (Set a strong password and save it!)
+* **Your Email:** `maaugust@student.42porto.com` (Can be fake)
+
+Click **Install WordPress**. Once the installation is complete, log in to the dashboard (`http://localhost:8080/wp-admin`) and publish a quick test post (e.g., "Welcome to my 42 Server!"). This guarantees that when the evaluator checks your port during the defense, they immediately see a living, breathing website instead of a setup wizard.
+
+> **[Insert Screenshot: Your fully functional WordPress homepage showing the test post]**
 
 > **[Insert Screenshot: The WordPress welcome screen in your browser]**
 
@@ -554,8 +564,10 @@ Configure the FTP daemon:
 nano /etc/vsftpd.conf
 ```
 
-Find and modify (or add) the following lines to lock the FTP user into their directory securely:
+Find and modify (or add) the following lines to lock the FTP user into their directory securely. We must also define specific "Passive Mode" ports because VirtualBox's NAT network will block random data ports during file transfers:
 ```plaintext
+listen=YES
+listen_ipv6=NO
 anonymous_enable=NO
 local_enable=YES
 write_enable=YES
@@ -564,6 +576,12 @@ allow_writeable_chroot=YES
 userlist_enable=YES
 userlist_file=/etc/vsftpd.userlist
 userlist_deny=NO
+
+# VirtualBox NAT Passive Mode Fix
+pasv_enable=YES
+pasv_min_port=40000
+pasv_max_port=40000
+pasv_address=127.0.0.1
 ```
 
 Save and exit.
@@ -581,6 +599,15 @@ usermod -d /srv/wordpress ftpuser
 
 # Give the FTP user and the Web Server ownership of the files
 chown -R ftpuser:www-data /srv/wordpress
+
+# Allow FTP (File Transfer Protocol)
+ufw allow 21
+
+# Allow the Passive Mode data port through UFW
+ufw allow 40000
+
+# Verify the new rules
+ufw status numbered
 
 # Restart the service
 systemctl restart vsftpd
@@ -605,12 +632,16 @@ Scroll down to the `[sshd]` section and make sure it is enabled and listening on
 [sshd]
 enabled = true
 port    = 4242
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s
 ```
 
 Scroll down to the `[vsftpd]` section and enable it as well:
 ```plaintext
 [vsftpd]
 enabled = true
+port    = ftp,ftp-data,ftps,ftps-data
+logpath = %(vsftpd_log)s
 ```
 
 Save and exit. Restart the service to apply the bans:
@@ -621,7 +652,7 @@ fail2ban-client status
 
 > **[Insert Screenshot: Output of `fail2ban-client status` showing both the sshd and vsftpd jails are active]**
 
-### 7. Evaluation Prep: Live Testing the Bonus Services
+### 🧠 Evaluation Prep: Live Testing the Bonus Services
 The evaluator will demand that you prove these services are actually working. Here is the exact script to follow to demonstrate each service perfectly:
 
 #### Test 1: Lighttpd, PHP, and MariaDB (The WordPress Site)
@@ -635,11 +666,13 @@ The evaluator will demand that you prove these services are actually working. He
 #### Test 2: vsftpd (File Transfer)
 * **The Proof:** You must show that the `ftpuser` can connect, upload a file, and is securely locked (chrooted) into the `/srv/wordpress` directory.
 * **The Action:**
-  1. In VirtualBox, add a new Port Forwarding rule (Host Port: `2121`, Guest Port: `21`).
-  2. On your **Host Machine**, open an FTP client (like FileZilla) or use the terminal: `ftp localhost 2121`.
-  3. Log in with the `ftpuser` credentials. 
-  4. Upload a random text file (e.g., `test_upload.txt`).
-  5. On your **Virtual Machine**, navigate to `/srv/wordpress` and type `ls -l` to prove the file successfully arrived!
+  1. In VirtualBox, add TWO new Port Forwarding rules. One for commands, and one for the Passive Mode data transfer:
+      * *FTP Commands:* Host Port: `2121` -> Guest Port: `21`
+      * *FTP Data:* Host Port: `40000` -> Guest Port: `40000`
+  3. On your **Host Machine**, open an FTP client (like FileZilla) or use the terminal: `ftp localhost 2121`.
+  4. Log in with the `ftpuser` credentials. 
+  5. Upload a random text file (e.g., `test_upload.txt`) or list the directory using `ls`.
+  6. On your **Virtual Machine**, navigate to `/srv/wordpress` and type `ls -l` to prove the file successfully arrived!
 
 > **[Insert Screenshot: Terminal on the VM showing the newly uploaded file sitting in the /srv/wordpress directory]**
 

@@ -165,6 +165,9 @@ Next, open the sudoers file securely:
 visudo
 ```
 
+### 🧠 Evaluation Prep: The evaluator will ask where this file is located and why you used visudo.
+**The Answer:** "The file is located at `/etc/sudoers`. We must always use the `visudo` command to edit it instead of standard text editors like `nano` or `vim`. `visudo` locks the file to prevent simultaneous edits and, most importantly, performs strict syntax checking when you save. If you make a typo in the sudoers file, it will reject the save, preventing you from accidentally locking yourself out of administrator privileges!"
+
 Add the following `Defaults` lines directly below the existing `Defaults env_reset` line:
 ```plaintext
 Defaults        env_reset
@@ -231,12 +234,27 @@ systemctl restart ssh
 > **[Insert Screenshot: The modified sshd_config file showing Port 4242 and PermitRootLogin no]**
 
 ### 3. Test Your Connection
-To ensure everything works smoothly, open a terminal on your Host Machine (your actual physical computer) and attempt to SSH into the VM:
+To ensure everything works smoothly, we need to test the connection from outside the virtual machine. Because of VirtualBox's NAT routing, the command changes depending on *where* you are connecting from:
+
+**Method A: From your Host Machine (Your physical computer)**
+Since you set up Port Forwarding, your host is listening on its own local port.
 ```bash
 ssh maaugust@localhost -p 4242
 ```
 
-If you connect successfully, your port forwarding, firewall, and SSH configuration are all perfect!
+**Method B: From a Different Physical Computer (e.g., an Evaluator's laptop)**
+If someone else on the same Wi-Fi/LAN wants to connect, `localhost` won't work. They must use your Host Machine's actual network IP address (find this by running `ipconfig` on Windows or `ifconfig` on Mac/Linux on your *Host*, not the VM).
+```bash
+ssh maaugust@<Host_LAN_IP> -p 4242
+```
+
+**Method C: From another Virtual Machine (on the same Host)**
+If you are testing from a second VM (like Ubuntu) running on the same host, use the VirtualBox NAT Gateway (usually `10.0.2.2`), which acts as a bridge back to the Host.
+```bash
+ssh maaugust@10.0.2.2 -p 4242
+```
+
+If you connect successfully and are prompted for your password, your port forwarding, UFW firewall, and SSH configuration are fully operational!
 
 ---
 
@@ -321,7 +339,7 @@ pcpu=$(grep "physical id" /proc/cpuinfo | sort -u | wc -l)
 vcpu=$(grep "^processor" /proc/cpuinfo | wc -l)
 ram=$(free -m | awk '$1 == "Mem:" {printf "%d/%dMB (%.2f%%)", $3, $2, $3/$2*100}')
 disk=$(df -m | grep "^/dev/" | grep -v "/boot$" | awk '{ut += $3; tt += $2} END {printf "%d/%dGb (%d%%)", ut, tt/1024, ut/tt*100}')
-cpul=$(top -bn1 | grep '^%Cpu' | awk '{printf "%.1f%%", 100 - $8}')
+cpul=$(LC_ALL=C top -bn1 | grep '^%Cpu' | tr ',' ' ' | awk '{printf "%.1f%%", 100 - $8}')
 lb=$(who -b | awk '$1 == "system" {print $3 " " $4}')
 lvmu=$(if [ $(lsblk | grep "lvm" | wc -l) -gt 0 ]; then echo yes; else echo no; fi)
 tcpc=$(ss -ta | grep ESTAB | wc -l)
@@ -349,30 +367,50 @@ Save and exit. Now, make the script executable:
 chmod +x /usr/local/bin/monitoring.sh
 ```
 
+### 🧠 Evaluation Prep: Explaining the Script
+The evaluator will ask you to explain how your script fetches this information. Here is your ultimate translation guide for the commands:
+
+* **`arc` (Architecture):** `uname -a` prints all system information, including the kernel version and machine architecture.
+* **`pcpu` (Physical CPU):** Searches `/proc/cpuinfo` for "physical id", uses `sort -u` to filter out duplicates, and `wc -l` (word count - lines) to count how many unique physical chips exist.
+* **`vcpu` (Virtual CPU):** Searches `/proc/cpuinfo` for "processor" (which represents individual cores/threads) and counts the lines.
+* **`ram` (Memory):** `free -m` displays memory in Megabytes. `awk` looks at the "Mem:" line, extracts column 3 (used) and column 2 (total), and calculates the percentage.
+* **`disk` (Storage):** `df -m` shows disk usage in MB. It filters for actual physical drives (`^/dev/`) and ignores the boot partition (`-v "/boot$"`). `awk` sums up the total and used blocks, then divides the total by 1024 to display it in Gigabytes.
+* **`cpul` (CPU Load):** `top -bn1` runs the task manager for exactly one iteration. We filter for the CPU line, format the commas into spaces, and use `awk` to subtract the idle percentage (`$8`) from 100% to get the active load.
+* **`lb` (Last Boot):** `who -b` prints the time of the last system boot.
+* **`lvmu` (LVM Use):** Runs `lsblk`. If the word "lvm" appears more than 0 times (`-gt 0`), it echoes "yes", otherwise "no".
+* **`tcpc` (TCP Connections):** `ss -ta` lists all TCP sockets. `grep ESTAB` filters only the ones that are actively "Established" (connected), and counts them.
+* **`ulog` (User Log):** `users` prints the names of currently logged-in users. `wc -w` counts the words to get the total number.
+* **`ip` & `mac` (Network):** `hostname -I` grabs the IP address. `ip link` lists network interfaces, and `grep "link/ether"` isolates the line containing the physical MAC address.
+* **`cmds` (Sudo Commands):** `journalctl _COMM=sudo` queries the system logs specifically for the `sudo` program. It counts how many times a COMMAND was successfully executed.
+* **`wall`:** This is the command that takes all of our formatted text and broadcasts it to the terminals of all currently logged-in users.
+
 ### 2. Schedule the Script with Cron
-We will use `cron` to execute this script. Since standard cron (`*/10`) triggers on the wall-clock (e.g., 10:00, 10:10), we will use an advanced configuration to ensure it triggers at **startup** and exactly every 10 minutes **from the boot time**.
+We will use `cron` to execute this script at server startup AND every 10 minutes. By default, standard cron runs on the wall-clock (e.g., 10:00, 10:10). To ensure it perfectly aligns with your server's exact boot time, we will use a dynamic sleep offset.
 ```bash
 # Open the root crontab
 crontab -e
 ```
 
 *(If prompted to select an editor, press `1` for nano).*
-Scroll to the very bottom of the file and add the following rules:
+Add the following line to the bottom of the file. This calculates the exact minute offset of your boot time and delays the script execution to match it:
 ```plaintext
 @reboot /usr/local/bin/monitoring.sh
-* * * * * min=$(cat /proc/uptime | awk '{print int($1/60)}'); if [ "$min" -gt 0 ] && [ "$((min \% 10))" -eq 0 ]; then /usr/local/bin/monitoring.sh; fi
+*/10 * * * * sleep $(who -b | awk '{split($4, time, ":"); print time[2]\%10}')m && /usr/local/bin/monitoring.sh
 ```
+
+*(Note: We escape the `%` symbol with a backslash `\%` because cron interprets unescaped percent signs as newlines!)*
 
 Save and exit.
 
-**🧠 Explanation for your defense:**
-* `@reboot`: Fulfills the "At server startup" requirement.
-* `* * * * *`: Forces cron to run a check every single minute.
-* `min=$(cat /proc/uptime...)`: Calculates exactly how many minutes the server has been alive.
-* `$((min \% 10)) -eq 0`: Checks if the uptime in minutes is a multiple of 10. If it is, it executes the script!
-> *(Note: You must explain to the evaluator that the `%` modulo operator is escaped with a backslash `\%`. If you don't escape it, cron reads `%` as a newline character and the script will fail!)*
 
-> **[Insert Screenshot: The crontab file showing both the @reboot and the uptime rules]**
+
+**🧠 Evaluation Prep: Explaining the Cron Job**
+* **The `@reboot` line:** This guarantees the script broadcasts immediately when the server finishes turning on, fulfilling the "At server startup" rule.
+* **The `*/10` line:** During your defense, the evaluator will ask you to change the script to run every minute instead of every 10 minutes without modifying the `monitoring.sh` script itself.
+  * **The Solution:** Just type `crontab -e` and change the `*/10` to `*`.
+  * **How the math works:** If your server booted at `17:48`, `48 % 10` equals `8`. Cron triggers at the top of the 10-minute mark (e.g., `18:00`), but the `sleep 8m` command forces it to wait exactly 8 minutes before running the script at `18:08`. This perfectly maintains the 10-minute interval from the initial boot time!
+
+> **[Insert Screenshot: The crontab file showing both the @reboot and the sleep command]**
 
 ### 3. Verify the Script
 To ensure it works without waiting 10 minutes, you can run it manually:

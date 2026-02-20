@@ -127,6 +127,20 @@ To run a virtual machine, you need a piece of software called a **Hypervisor** (
 
 Because the setup process differs significantly depending on the chosen operating system, the step-by-step tutorials have been separated into dedicated guides. Click the guide for your chosen OS below:
 
+### ⚠️ CRITICAL 42 CAMPUS WARNING: Where to save your VM
+Because Virtual Machines take up a massive amount of disk space, you **cannot** save your VirtualBox files in your standard home directory. You must save them in either `goinfre` or `sgoinfre`. 
+
+Understanding the difference between these two directories is the most important part of this project. If you choose incorrectly, you will lose your entire server!
+
+* **`goinfre` (Local Storage):** On each computer, there is a folder called `goinfre`. This folder is different on each computer. If you put your virtual machine in the `goinfre` folder, you have to stay on the same computer all along.
+  * **Pros:** It is very fast, and your VM will not be automatically deleted by the network scripts.
+  * **Cons:** You are permanently tied to this exact Mac/PC. If you come to campus tomorrow and someone else is sitting at your desk, you cannot work on your project until they leave.
+* **`sgoinfre` (Network Storage):** `sgoinfre` is a server accessible from the 42 School network and available from each computer. If you put your virtual machine on the `sgoinfre` server, you can change computers during your project.
+  * **Pros:** You can sit at *any* computer on campus, log in, and access your VM.
+  * **Cons:** **IT IS WIPED REGULARLY.** There are strict storage rules and limitations in `sgoinfre`. Most 42 campuses automatically delete everything inside `sgoinfre` every single week (usually on Mondays) to save server space, or if you exceed your personal storage limit (which is usually around 15GB). 
+
+**The Golden Rule:** If you install your VM on `sgoinfre` so you can sit anywhere, you **MUST** export your Virtual Machine to a personal USB drive at the end of every week before the Monday wipe, or you will have to restart the entire Born2beRoot project from scratch!
+
 ### 📖 Step-by-Step Installation Guides
 * [**👉 CLICK HERE for the Debian Setup Guide (Recommended)**](./guides/1_debian_setup.md)
 * [**👉 CLICK HERE for the Rocky Linux Setup Guide**](./guides/2_rocky_setup.md)

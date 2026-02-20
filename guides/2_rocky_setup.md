@@ -52,7 +52,16 @@ Start your virtual machine and select **Install Rocky Linux**. Rocky uses the "A
 > **[Insert Screenshot: Software Selection screen showing Minimal Install]**
 
 ### Partitioning Disks (The Most Critical Step)
-To achieve the bonus score, you must set up 7 specific logical volumes. 
+To achieve the bonus score, you must set up 7 specific logical volumes.
+```mermaid
+graph TD
+    A[Physical Drives /dev/sda] -->|Encrypted LUKS| B[Physical Volume PV]
+    B --> C[Volume Group VG: 'hostname-vg']
+    C --> D[Logical Volume LV: /root]
+    C --> E[Logical Volume LV: /home]
+    C --> F[Logical Volume LV: /var]
+    C --> G[Logical Volume LV: /srv...]
+```
 
 1. Click **Installation Destination**.
 2. Select your 30GB disk. Under Storage Configuration, select **Custom**, then click **Done** at the top left.
@@ -511,6 +520,19 @@ sudo vi /etc/vsftpd/vsftpd.conf
 ```
 
 Find and modify (or add) these specific lines to lock the FTP user in securely and force Passive Mode for the NAT connection:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server Command Port 21
+    participant Server Data Port 40000
+
+    Client->>Server Command Port 21: PASV (Request Passive Mode)
+    Note over Server Command Port 21: Server opens NAT port 40000
+    Server Command Port 21-->>Client: 227 Entering Passive Mode (127.0.0.1, Port 40000)
+    Client->>Server Data Port 40000: Connects for Data Transfer
+    Server Data Port 40000-->>Client: Transfer files (Directory List, Uploads)
+```
+
 ```plaintext
 listen=YES
 listen_ipv6=NO
@@ -614,8 +636,16 @@ Evaluators almost always ask you to change your server's hostname.
    sudo vi /etc/hosts
    ```
    *Find your old hostname and replace it with the new one.*
+   ```bash
+   127.0.0.1   localhost
+   127.0.1.1   evaluator_name42   # <--- Change this line to your new hostname!
+  
+   ::1         localhost ip6-localhost ip6-loopback
+   ff02::1     ip6-allnodes
+   ff02::2     ip6-allrouters
+   ```
    
-3. **Reboot:**
+4. **Reboot:**
    ```bash
    sudo reboot
    ```
